@@ -134,7 +134,7 @@ app.use(express.urlencoded({ extended: true }));
 function base64ToPNG(data) {
   data = data.replace(/^data:image\/png;base64,/, '');
 
-  fs.writeFile(path.resolve(__dirname, '../uccg/image.png'), data, 'base64', function(err) {
+  fs.writeFile(path.resolve(__dirname, 'image.png'), data, 'base64', function(err) {
     if (err) throw err;
   });
 }
