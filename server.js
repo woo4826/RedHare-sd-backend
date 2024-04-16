@@ -131,6 +131,14 @@ app.post("/upload", upload.single("fileInput"), (req, res) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+function base64ToPNG(data) {
+  data = data.replace(/^data:image\/png;base64,/, '');
+
+  fs.writeFile(path.resolve(__dirname, '../uccg/image.png'), data, 'base64', function(err) {
+    if (err) throw err;
+  });
+}
+
 const callFunction = async (payload, num) => {
   const url = "http://203.252.161.105:7860";
 
@@ -170,11 +178,8 @@ const callFunction = async (payload, num) => {
     const rawImage = responseData["images"][0].split(",", 1)[0];
     //const image = await loadImage(rawImage);
 
-    //console.log(encode);
-    var encode = Buffer.from(rawImage).toString("base64");
-    var decode = Buffer.from(rawImage, "base64").toString("utf-8"); //파일 디코딩
+    base64ToPNG(rawImage);
 
-    fs.writeFileSync("./new.png", decode);
 
     const pngPayload = {
       image: 'data:image/png;base64,'+ rawImage
