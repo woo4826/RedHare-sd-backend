@@ -6,18 +6,20 @@ const fs = require('fs');
 const { promisify } = require('util');
 const { createCanvas, loadImage } = require('canvas');
 
-const fetch = require('node-fetch');
+const fetch=require('node-fetch');
 const { Readable } = require('stream');
 const streamifier = require('streamifier');
 
+const bodyParser = require('body-parser');
 app.set('view engine','ejs')
 
-
+app.use(bodyParser.json());
 
 
 
 const multer = require('multer'); // multer middleware for handling file uploads
 const path = require('path');
+const { response } = require('express');
 
 const port = 3000;
 
@@ -101,6 +103,17 @@ const payload = {
   }
 };
 
+class Item {
+  constructor() {
+    this.prompt = [];
+  }
+}
+
+prompt_boy =" (id photo:1.2),one boy, short hair,  (upper body:1.2), detailed skin, distinct image, detail face, 8k, uhd, intricate quality, intricate details, Realistic, photorealistic, photograph, ultra high res, high resolution, masterpiece, best quality, 1boy, solo, black eyes, sharp nose, looking at viewer, cinemamic lighting, (school uniform:1.4) ,"
+prompt_girl = "  (id photo:1.2), (upper body:1.2), detailed skin, distinct image, detail face, 8k, uhd, intricate quality, intricate details, Realistic, photorealistic, photograph, ultra high res, high resolution, masterpiece, best quality, 1girl, solo, black eyes, sharp nose, looking at viewer, cinemamic lighting, (school uniform:1.4),"
+
+
+
 const writeFileAsync = promisify(fs.writeFile);
 
 
@@ -115,11 +128,6 @@ app.post('/upload', upload.single('fileInput'), (req, res) => {
   res.send('File uploaded successfully!');
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
-
-
 
 
 
@@ -129,30 +137,56 @@ app.use(express.urlencoded({ extended: true }));
 
 
 const callFunction = async (payload, num) => {
-    const url = "http://127.0.0.1:7860";
+    const url = "http://203.252.161.105:7860";
 
     const optionPayload = {
         sd_model_checkpoint: "majicmixRealistic_v7.safetensors [7c819b6d13]",
     };
-
+    console.log("12233333");
+   
+    // app.post(`${url}/sdapi/v1/options`, (req, res)=>{
+    //   req.body= JSON.stringify(optionPayload);
+    //   req.headers = { 'Content-Type': 'application/json' };     
+    // });
+  
+    console.log("12233333");
     const optionResponse = await fetch(`${url}/sdapi/v1/options`, {
         method: 'POST',
         body: JSON.stringify(optionPayload),
         headers: { 'Content-Type': 'application/json' },
     });
-
+    
+    console.log("12233333");
     try {
-        const response = await fetch(`${url}/sdapi/v1/txt2img`, {
-            method: 'POST',
-            body: JSON.stringify(payload),
-            headers: { 'Content-Type': 'application/json' },
-        });
-        const responseData = await response.json();
-        const rawImage = responseData.images[0].split(",", 1)[0];
-        const image = await loadImage(rawImage);
 
+        const response = await fetch(`${url}/sdapi/v1/txt2img`, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          headers: { 'Content-Type': 'application/json' },
+        });
+        // app.post(`${url}/sdapi/v1/txt2img`, (req, res)=>{
+        //   req.body= JSON.stringify(payload);
+        //   req.headers = { 'Content-Type': 'application/json' };
+
+        // });
+        //console.log(response)
+        
+        const responseData = await response.json();
+        
+        
+        const rawImage = responseData['images'][0].split(",", 1)[0];
+        //const image = await loadImage(rawImage);
+       
+        //console.log(encode);
+        var encode = Buffer.from(rawImage).toString('base64');
+        decode = Buffer.from(rawImage, 'base64').toString('utf-8'); //파일 디코딩
+
+        fs.writeFileSync('./new.png', decode); 
+
+        
+    
         const pngPayload = {
-            image: `data:image/png;base64,${rawImage}`
+            "image": `data:image/png;base64,${rawImage}`
         };
 
         const response2 = await fetch(`${url}/sdapi/v1/png-info`, {
@@ -162,14 +196,14 @@ const callFunction = async (payload, num) => {
         });
         const pngInfo = await response2.json();
 
-        const canvas = createCanvas(image.width, image.height);
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(image, 0, 0);
+        //const canvas = createCanvas(image.width, image.height);
+        //const ctx = canvas.getContext('2d');
+        //ctx.drawImage(image, 0, 0);
 
-        // Save image
-        const out = fs.createWriteStream(`output${num}.png`);
-        const stream = canvas.createPNGStream();
-        stream.pipe(out);
+        
+        // const out = fs.createWriteStream(`output${num}.png`);
+        // const stream = canvas.createPNGStream();
+        // stream.pipe(out);
         console.log("image success");
 
         return rawImage;
@@ -183,143 +217,40 @@ app.get('/exception', (req, res, next) => {
     throw new Error('Some exception');
 });
 
-app.post('/fastapi/make', async (req, res, next) => {
-    const item = req.body;
-    const resArray = [];
-    const randSeed = Math.floor(Math.random() * (9999999999 - 1000000000 + 1) + 1000000000);
-
-    try {
-        let numFile = 0;
-        for (const i of item.prompt) {
-            let targetPayload;
-            if (i.includes('...up...scaling...')) {
-                targetPayload = {
-                    prompt: '',
-                    negative_prompt: "...",
-                    steps: 20,
-                    sampler_name: "DPM++ 2M Karras",
-                    cfg_scale: 7,
-                    seed: randSeed,
-                    enable_hr: true,
-                    hr_upscaler: "R-ESRGAN 4x+",
-                    hr_resize_x: 1024,
-                    hr_resize_y: 1024,
-                    hr_second_pass_steps: 16,
-                    denoising_strength: 0.4,
-                    alwayson_scripts: {
-                        "ADetailer": {
-                            args: [
-                                true,
-                                false,
-                                {
-                                    ad_model: "face_yolov8n.pt",
-                                    ad_prompt: "",
-                                    ad_negative_prompt: "",
-                                    ad_confidence: 0.3,
-                                    ad_mask_k_largest: 0,
-                                    ad_mask_min_ratio: 0.0,
-                                    ad_mask_max_ratio: 1.0,
-                                    ad_dilate_erode: 32,
-                                    ad_x_offset: 0,
-                                    ad_y_offset: 0,
-                                    ad_mask_merge_invert: "None",
-                                    ad_mask_blur: 4,
-                                    ad_denoising_strength: 0.4,
-                                    ad_inpaint_only_masked: true,
-                                    ad_inpaint_only_masked_padding: 0,
-                                    ad_use_inpaint_width_height: false,
-                                    ad_inpaint_width: 512,
-                                    ad_inpaint_height: 512,
-                                    ad_use_steps: true,
-                                    ad_steps: 28,
-                                    ad_use_cfg_scale: false,
-                                    ad_cfg_scale: 7.0,
-                                    ad_use_sampler: false,
-                                    ad_sampler: "DPM++ 2M Karras",
-                                    ad_use_noise_multiplier: false,
-                                    ad_noise_multiplier: 1.0,
-                                    ad_use_clip_skip: false,
-                                    ad_clip_skip: 1,
-                                    ad_restore_face: false,
-                                    ad_controlnet_model: "None",
-                                    ad_controlnet_module: "None",
-                                    ad_controlnet_weight: 1.0,
-                                    ad_controlnet_guidance_start: 0.0,
-                                    ad_controlnet_guidance_end: 1.0
-                                }
-                            ]
-                        }
-                    }
-                };
-            } else {
-                targetPayload = {
-                    prompt: '',
-                    negative_prompt: "...",
-                    steps: 20,
-                    sampler_name: "DPM++ 2M Karras",
-                    cfg_scale: 7,
-                    seed: randSeed,
-                    alwayson_scripts: {
-                        "ADetailer": {
-                            args: [
-                                true,
-                                false,
-                                {
-                                    ad_model: "face_yolov8n.pt",
-                                    ad_prompt: "",
-                                    ad_negative_prompt: "",
-                                    ad_confidence: 0.3,
-                                    ad_mask_k_largest: 0,
-                                    ad_mask_min_ratio: 0.0,
-                                    ad_mask_max_ratio: 1.0,
-                                    ad_dilate_erode: 32,
-                                    ad_x_offset: 0,
-                                    ad_y_offset: 0,
-                                    ad_mask_merge_invert: "None",
-                                    ad_mask_blur: 4,
-                                    ad_denoising_strength: 0.4,
-                                    ad_inpaint_only_masked: true,
-                                    ad_inpaint_only_masked_padding: 0,
-                                    ad_use_inpaint_width_height: false,
-                                    ad_inpaint_width: 512,
-                                    ad_inpaint_height: 512,
-                                    ad_use_steps: true,
-                                    ad_steps: 28,
-                                    ad_use_cfg_scale: false,
-                                    ad_cfg_scale: 7.0,
-                                    ad_use_sampler: false,
-                                    ad_sampler: "DPM++ 2M Karras",
-                                    ad_use_noise_multiplier: false,
-                                    ad_noise_multiplier: 1.0,
-                                    ad_use_clip_skip: false,
-                                    ad_clip_skip: 1,
-                                    ad_restore_face: false,
-                                    ad_controlnet_model: "None",
-                                    ad_controlnet_module: "None",
-                                    ad_controlnet_weight: 1.0,
-                                    ad_controlnet_guidance_start: 0.0,
-                                    ad_controlnet_guidance_end: 1.0
-                                }
-                            ]
-                        }
-                    }
-                };
-            }
-
-            if (i.includes('girl')) {
-                targetPayload.prompt = '...';
-            } else {
-                targetPayload.prompt = '...';
-            }
-
-            const response = await callFunction(targetPayload, numFile);
-            resArray.push(response);
-            numFile++;
-        }
-        res.json({ images: resArray });
-    } catch (error) {
-        next(error);
+app.post("/make", async (req, res) => {
+  const item=req.body;
+  const numFiles = 0;
+  const result = [];
+  const randSeed = Math.floor(Math.random() * (9999999999 - 1000000000 + 1)) + 1000000000;
+  
+  for (const i of item.prompt) {
+    let targetPayload;
+    if (i.includes('...up...scaling...')) {
+      targetPayload = payloadUpscale;
+    } else {
+      targetPayload = payload;
     }
+
+    if (i.includes("girl")) {
+      targetPayload.prompt = prompt_girl + i;
+    } else {
+      targetPayload.prompt = prompt_boy + i;
+    }
+
+    targetPayload.seed = randSeed;
+    console.log('==========================================');
+    console.log(JSON.stringify(targetPayload));
+    console.log('==========================================');
+
+    const asdf = await callFunction(targetPayload, numFiles);
+    if (!asdf) {
+      return res.json({ err: "no res" });
+    }
+
+    result.push(asdf);
+    numFiles += 1;
+  }
+  res.json({ images: result });
 });
 
 app.listen(port, () => {
