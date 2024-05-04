@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { Sequelize, DataTypes } = require('sequelize');
+const { Sequelize, DataTypes, UUID } = require('sequelize');
 const sequelize = require('../../config/database');
 
 const User = sequelize.define('users', {
@@ -18,13 +18,18 @@ const User = sequelize.define('users', {
 			type: DataTypes.STRING,
 			allowNull: false
 		},
-		resetToken: {
+		uuid: {
+			type: Sequelize.UUID,
+			defaultValue: Sequelize.UUIDV4,
+			allowNull: false
+		},
+		accessToken: {
 			type: DataTypes.STRING,
 			allowNull: true
-		},
-		resetTokenExpiry: {
-			type: DataTypes.DATE,
-			allowNull:true
+		  },
+		refreshToken: {
+			type: DataTypes.STRING,
+			allowNull: true
 		}
   	},
 	{
@@ -35,5 +40,7 @@ const User = sequelize.define('users', {
 				fields: ['email']
 			}],
 	});
+
+
 
 module.exports = User;
