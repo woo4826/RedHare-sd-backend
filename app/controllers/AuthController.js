@@ -5,6 +5,8 @@ const validator = require('validator');
 const User = require('../models/User');
 const Session = require('../models/Session');
 const jwt = require('../../config/jwt');
+const auth = require('../middlewares/isAuth');
+
 
 const message = (req) => {
 	let message = req.flash('error');
@@ -37,6 +39,8 @@ exports.loginPage = (req, res, next) => {
 };
 
 exports.login = (req, res, next) => {
+	
+
 	const validationErrors = [];
 	if (!validator.isEmail(req.body.inputEmail)) validationErrors.push('Please enter a valid email address.');
 	if (validator.isEmpty(req.body.inputPassword)) validationErrors.push('Password cannot be blank.');
@@ -59,25 +63,30 @@ exports.login = (req, res, next) => {
 			            req.session.user = user.dataValues;
 			            return req.session.save(async err => {
 							console.log(err);
-							const accessToken = jwt.makeAccessToken({id: user});
+							const accessToken = jwt.makeAccessToken({id: user.id});
     						const refreshToken = jwt.makeRefreshToken();
 							console.log("1");
-    						exports.saveTokensToDB = async (accessToken, refreshToken) => {
-								try {
-								  const newToken = await User.create({ accessToken, refreshToken });
-								  return newToken;
-								  
-								} catch (error) {
-								  console.error('Error saving tokens to DB:', error);
-								  throw error;
-								}
-							};
+    						
 
     
 							console.log(user.accessToken);
 							console.log(user.accessToken);
-							console.log(user.uuid);
+							console.log(user);
+							console.log(req.body);
+							
+							res.cookie("accessToken",accessToken,{
+								secure : false,
+								httpOnly : true,
+							})
+							res.cookie("refreshToken",refreshToken,{
+								secure : false,
+								httpOnly : true,
+							})
 							res.redirect('/');
+							
+							
+							
+							
 			            });
 					}
 					req.flash('error', 'Invalid email or password.');
