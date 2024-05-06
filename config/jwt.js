@@ -1,6 +1,6 @@
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
-const JWT_KEY = process.env.ACCESS_TOKEN_SECRET 
+const JWT_KEY = process.env.ACCESS_TOKEN_SECRET;
 const User = require('../app/models/User');
 
 // accessToken 발급 함수
@@ -8,7 +8,7 @@ exports.makeAccessToken = (Object) =>{
     const token = jwt.sign(
         Object,  
         JWT_KEY, 
-        {expiresIn: "2m"}
+        {expiresIn: "10h"}
     );
     console.log(token)
     return token;
@@ -56,17 +56,3 @@ exports.refreshVerify = async (token, userId) => {
 };
 
 // access token 유효성 검사
-exports.verify = (token) => {
-    try {
-      const decoded = jwt.verify(token, JWT_KEY);
-      return {
-        ok: true,
-        id: decoded.id
-      };
-    } catch (error) {
-      return {
-        ok: false,
-        message: error.message,
-      };
-    }
-  };

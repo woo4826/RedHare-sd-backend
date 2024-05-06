@@ -18,6 +18,13 @@
               <li>Help center access</li>
             </ul>
             <button type="button" class="btn btn-lg btn-block btn-outline-primary">Sign up for free</button>
+            <div class="container">
+  <!-- 파일 선택 양식 추가 -->
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" name="images" id="imageInput" multiple>
+    <button type="submit">Upload</button>
+  </form>
+</div>
           </div>
         </div>
         <div class="card mb-4 box-shadow">
@@ -90,3 +97,35 @@
         </div>
       </footer>
     </div>
+
+<script>
+  document.getElementById('imageInput').addEventListener('change', function() {
+    const formData = new FormData();
+    const files = document.getElementById('imageInput').files;
+    for (let i = 0; i < files.length; i++) {
+      formData.append('images', files[i]);
+    }
+    // 토큰 가져오기
+    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzE0ODgzNzI3LCJleHAiOjE3MTQ5MTk3Mjd9.vgV63FDXzaa3k-iWE8NE0oxZBfeKw8ldpyDj0uDyDJo';
+    // 요청 헤더에 토큰 추가
+    const headers = new Headers();
+    headers.append('Authorization', `Bearer ${token}`);
+    fetch('/upload', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.text();
+    })
+    .then(data => {
+      console.log(data);
+      // 업로드 성공 시 실행할 로직 추가
+    })
+    .catch(error => {
+      console.error('There was an error!', error);
+    });
+  });
+</script>

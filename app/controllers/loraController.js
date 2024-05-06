@@ -1,7 +1,14 @@
-const jwt = require('../../config/jwt')
+const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const auth = require('../middlewares/isAuth');
+const express=require('express');
+const FormData=require('form-data')
+const axios=require('axios')
+const app = express();
+ 
+
 
 const payload = {
     prompt: "",
@@ -58,109 +65,166 @@ const payload = {
   };
 
 
+const uploadDirectory = 'uploads/';
+
+function getUserIdFromToken(token) {
+  // 여기서는 단순히 토큰의 두 번째 부분을 사용자 아이디로 가정합니다.
+  return token.split(' ')[1];
+}
 
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        // 업로드 시간을 기반으로 폴더 경로 생성
-        const uploadPath = path.join('uploads', Date.now().toString());
-        // 해당 폴더가 없으면 생성
-        if (!fs.existsSync(uploadPath)) {
-            fs.mkdirSync(uploadPath, { recursive: true });
-        }
-        cb(null, uploadPath); // 생성된 폴더에 저장
-    },
-    filename: function (req, file, cb) {
-        cb(null, file.originalname); // 원래 파일 이름을 사용하여 파일명 생성
+  destination: function (req, file, cb) {
+    // 사용자의 아이디 값을 가져옵니다. 여기서는 토큰에서 아이디 값을 추출한다고 가정합니다.
+    let userId = getUserIdFromToken(req.headers.authorization);
+
+    // 사용자 아이디에 해당하는 폴더 경로를 생성합니다.
+    let userUploadDirectory = path.join(uploadDirectory, userId);
+
+    // 해당 경로가 존재하지 않으면 폴더를 생성합니다.
+    if (!fs.existsSync(userUploadDirectory)) {
+      fs.mkdirSync(userUploadDirectory, { recursive: true });
     }
+
+    // 파일이 저장될 최종 경로를 설정합니다.
+    cb(null, userUploadDirectory);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
 });
 
+const upload = multer({ storage });
+
 // 파일 필터링 함수 설정 (이미지 파일만 허용)
-const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-    } else {
-        cb(new Error('Only images are allowed!'), false);
-    }
-};
+
 
 // 업로드 인스턴스 생성
 exports.upload = (req, res, next) => {
-  multer({ storage: storage, fileFilter: fileFilter });
-	res.render(200);
+  let token = req.headers.authorization.split(' ')[1];
+  
+  try {
+      let payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+      console.log('토큰 인증 성공', payload);
+      // 토큰 인증 성공한 경우 파일 업로드를 처리합니다.
+      upload.array('images', 5)(req, res, err => {
+          if (err) {
+              console.log(err);
+              res.status(400).send("Error uploading files.");
+          } else {
+              // 파일 정보를 반환합니다.
+              console.log(req.body);
+              console.log(payload);
+              res.send(req.file);
+          }
+      });
+      
+
+  } catch (err) {
+      console.log("인증 에러");
+      res.status(405).json({ msg: 'error' });
+      next();
+  }
 };
-  
 
 
 
-const callFunction = async (payload, num) => {
-    const url = "http://203.252.161.105:7860";
+
+
+
+
+
+// // 파일을 읽어와서 요청을 보내는 작업 수행
+// exports.generateLora = (req,res,next) => {
+//   // 사용자 ID를 FormData에 추가 (토큰 값 사용)
+//   let token = req.headers.authorization.split(' ')[1];
+//   let payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+//   console.log('토큰 인증 성공', payload);
+//   let directory = path.join('uploads', token);
   
-    const optionPayload = {
-      sd_model_checkpoint: "majicmixRealistic_v7.safetensors [7c819b6d13]",
-    };
-    console.log("12233333");
+//   // fs.readdir(directory, (err, files) => {
+//   //   if (err) {
+//   //     console.error('Error reading directory:', err);
+//   //     return callback(err);
+//   //   }
+//   //   callback(null, files);
+//   // });
+
+//   const url = 'http://203.252.161.106:4000/generateModel';
+
+//   // FormData 객체 생성
+//   const formData = new FormData();
+//   formData.append('id', payload.id);
+//   // 파일 정보를 FormData에 추가
+
+//   files.forEach(file => {
+//     formData.append('files', fs.createReadStream(path.join(uploadDirectory, file)));
+//   });
+
   
-    // app.post(`${url}/sdapi/v1/options`, (req, res)=>{
-    //   req.body= JSON.stringify(optionPayload);
-    //   req.headers = { 'Content-Type': 'application/json' };
-    // });
+
+//   // POST 요청 보내기
   
-    console.log("12233333");
-    const optionResponse = await fetch(`${url}/sdapi/v1/options`, {
-      method: "POST",
-      body: JSON.stringify(optionPayload),
-      headers: { "Content-Type": "application/json" },
-    });
+//   res=axios.post(url, formData, {
+//     headers: {
+//       ...formData.getHeaders(),
+//       // 다른 헤더들도 필요하면 여기에 추가
+//     }
+//   })
+//   .then(response => {
+//     console.log('Response:', response.data);
+//   })
+//   .catch(error => {
+//     console.error('Error:', error);
+//   });
   
-    console.log("12233333");
-    try {
-      const response = await fetch(`${url}/sdapi/v1/txt2img`, {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
-      });
-      // app.post(`${url}/sdapi/v1/txt2img`, (req, res)=>{
-      //   req.body= JSON.stringify(payload);
-      //   req.headers = { 'Content-Type': 'application/json' };
+
+// }
+
+
+
+
+
+exports.generateLora = (req, res, next) => {
+  // 사용자 ID를 FormData에 추가 (토큰 값 사용)
+  let token = req.headers.authorization.split(' ')[1];
+  let payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+  console.log('토큰 인증 성공', payload);
+  let directory = path.join('uploads', token);
   
-      // });
-      //console.log(response)
-  
-      const responseData = await response.json();
-  
-      const rawImage = responseData["images"][0].split(",", 1)[0];
-      //const image = await loadImage(rawImage);
-  
-      base64ToPNG(rawImage);
-  
-  
-      const pngPayload = {
-        image: 'data:image/png;base64,'+ rawImage
-      };
-  
-      const response2 = await fetch(`${url}/sdapi/v1/png-info`, {
-        method: "POST",
-        body: JSON.stringify(pngPayload),
-        headers: { "Content-Type": "application/json" },
-      });
-      const pngInfo = await response2.json();
-  
-      //const canvas = createCanvas(image.width, image.height);
-      //const ctx = canvas.getContext('2d');
-      //ctx.drawImage(image, 0, 0);
-  
-      // const out = fs.createWriteStream(`output${num}.png`);
-      // const stream = canvas.createPNGStream();
-      // stream.pipe(out);
-      console.log("image success");
-  
-      return rawImage;
-    } catch (error) {
-      console.error("Connection error occurred");
-      throw error;
+  fs.readdir(directory, (err, files) => {
+    if (err) {
+      console.error('Error reading directory:', err);
+      return res.status(500).send('Error reading directory');
     }
-  };
 
+    const url = 'http://203.252.161.106:4000/generateModel';
+
+    // FormData 객체 생성
+    const formData = new FormData();
+    formData.append('id', payload.id);
+    
+    // 파일 정보를 FormData에 추가
+    files.forEach(file => {
+      formData.append('files', fs.createReadStream(path.join(directory, file)));
+    });
+
+    // POST 요청 보내기
+    axios.post(url, formData, {
+      headers: {
+        ...formData.getHeaders(),
+        // 다른 헤더들도 필요하면 여기에 추가
+      }
+    })
+    .then(response => {
+      console.log('Response:', response.data);
+      res.status(200).send(response.data);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      res.status(500).send('Error sending request');
+    });
+  });
+};
 
 
 
@@ -176,8 +240,11 @@ exports.make = async (req, res, next) => {
     var result = [];
     var randSeed =
       Math.floor(Math.random() * (9999999999 - 1000000000 + 1)) + 1000000000;
-  
-    for (const i of item.prompt) {
+  if (item.prompt == undefined || item.prompt == null){
+    res.send("no prompt");
+    return;
+  }
+    for (const i of Array.from(item.prompt)) {
       let targetPayload;
       if (i.includes("...up...scaling...")) {
         targetPayload = payloadUpscale;

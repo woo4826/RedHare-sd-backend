@@ -18,15 +18,6 @@ const User = sequelize.define('users', {
 			type: DataTypes.STRING,
 			allowNull: false
 		},
-		uuid: {
-			type: Sequelize.UUID,
-			defaultValue: Sequelize.UUIDV4,
-			allowNull: false
-		},
-		accessToken: {
-			type: DataTypes.STRING,
-			allowNull: true
-		  },
 		refreshToken: {
 			type: DataTypes.STRING,
 			allowNull: true
