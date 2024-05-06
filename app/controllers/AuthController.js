@@ -6,46 +6,48 @@ const User = require('../models/User');
 const Session = require('../models/Session');
 const jwt = require('../../config/jwt');
 const auth = require('../middlewares/isAuth');
+const { domainToASCII } = require('url');
 
 
-const message = (req) => {
-	let message = req.flash('error');
-	if (message.length > 0) {
-		message = message[0];
-	} else {
-		message = null;
-	}
+// const message = (req) => {
+// 	//let message = req.flash('error');
+// 	if (message.length > 0) {
+// 		message = message[0];
+// 	} else {
+// 		message = null;
+// 	}
 
-	return message;
-}
+// 	return message;
+// }
 
-const oldInput = (req) => {
-	let oldInput = req.flash('oldInput');
-	if (oldInput.length > 0) {
-		oldInput = oldInput[0];
-	} else {
-		oldInput = null;
-	}
+// const oldInput = (req) => {
+// 	let oldInput = req.flash('oldInput');
+// 	if (oldInput.length > 0) {
+// 		oldInput = oldInput[0];
+// 	} else {
+// 		oldInput = null;
+// 	}
 	
-	return oldInput;
-}
+// 	return oldInput;
+// }
 
-exports.loginPage = (req, res, next) => {
-	if(res.locals.isAuthenticated){
-		res.redirect('/');
-	} else {
-		res.render('login',{layout: 'login_layout', loginPage: true, pageTitle: 'Login', errorMessage: message(req), oldInput: oldInput(req)});
-	}
-};
+// exports.loginPage = (req, res, next) => {
+// 	if(res.locals.isAuthenticated){
+// 		res.redirect('/');
+// 	} else {
+// 		res.render('login',{layout: 'login_layout', loginPage: true, pageTitle: 'Login', errorMessage: message(req), oldInput: oldInput(req)});
+// 	}
+// };
 
 exports.login = (req, res, next) => {
 	
 
 	const validationErrors = [];
+	console.log(req.body);
 	if (!validator.isEmail(req.body.inputEmail)) validationErrors.push('Please enter a valid email address.');
 	if (validator.isEmpty(req.body.inputPassword)) validationErrors.push('Password cannot be blank.');
 	if (validationErrors.length) {
-		req.flash('error', validationErrors);
+		//req.flash('error', validationErrors);
 		return res.redirect('/login');
 	}
 	User.findOne({
@@ -59,49 +61,30 @@ exports.login = (req, res, next) => {
 				.then(doMatch => {
 					if (doMatch) {
 						console.log("1");
-						req.session.isLoggedIn = true;
-			            req.session.user = user.dataValues;
-			            return req.session.save(async err => {
-							console.log(err);
-							const accessToken = jwt.makeAccessToken({id: user.id});
-    						const refreshToken = jwt.makeRefreshToken();
-							console.log("1");
-    						
+						//req.session.isLoggedIn = true;
+						const accessToken = jwt.makeAccessToken({id: user.id});
+						const refreshToken = jwt.makeRefreshToken();
+						res.send({
+							"accessToken" : accessToken,
+							"refreshToken" : refreshToken,
+						});
 
-    
-							console.log(user.accessToken);
-							console.log(user.accessToken);
-							console.log(user);
-							console.log(req.body);
-							
-							res.cookie("accessToken",accessToken,{
-								secure : false,
-								httpOnly : true,
-							})
-							res.cookie("refreshToken",refreshToken,{
-								secure : false,
-								httpOnly : true,
-							})
-							res.redirect('/');
-							
-							
-							
-							
-			            });
+
 					}
-					req.flash('error', 'Invalid email or password.');
-					req.flash('oldInput',{email: req.body.inputEmail});
-					return res.redirect('/login');
+					else{
+
+						res.send(403);
+					}
 				})
 				.catch(err => {
 					console.log(err);
-					req.flash('error', 'Sorry! Somethig went wrong.');
-					req.flash('oldInput',{email: req.body.inputEmail});
+					//req.flash('error', 'Sorry! Somethig went wrong.');
+					//req.flash('oldInput',{email: req.body.inputEmail});
 					return res.redirect('/login');
 				});
 		} else {
-			req.flash('error', 'No user found with this email');
-			req.flash('oldInput',{email: req.body.inputEmail});
+			//req.flash('error', 'No user found with this email');
+			//req.flash('oldInput',{email: req.body.inputEmail});
 			return res.redirect('/login');
 		}
 	})
@@ -119,9 +102,7 @@ exports.logout = (req, res, next) => {
 	}
 };
 
-exports.signUpPage = (req, res, next) => {
-	res.render('sign_up',{layout: 'login_layout', signUpPage: true, errorMessage: message(req), oldInput: oldInput(req)});
-};
+
 
 exports.signUp = (req, res, next) => {
 	User.findOne({
@@ -146,28 +127,28 @@ exports.signUp = (req, res, next) => {
 						return res.redirect('/login');
 					});
 		} else {
-			req.flash('error', 'E-Mail exists already, please pick a different one.');
-			req.flash('oldInput',{name: req.body.name});
+			//req.flash('error', 'E-Mail exists already, please pick a different one.');
+			//req.flash('oldInput',{name: req.body.name});
         	return res.redirect('/sign-up');
 		}
 	})
 	.catch(err => console.log(err));
 };
 
-exports.forgotPasswordPage = (req, res, next) => {
-	if(res.locals.isAuthenticated){
-		return res.redirect('/');
-	} else {
-		return res.render('forgot_password',{layout: 'login_layout', loginPage: true, pageTitle: 'Forgot Password', errorMessage: message(req), oldInput: oldInput(req)});
-	}
-};
+// exports.forgotPasswordPage = (req, res, next) => {
+// 	if(res.locals.isAuthenticated){
+// 		return res.redirect('/');
+// 	} else {
+// 		return res.render('forgot_password',{layout: 'login_layout', loginPage: true, pageTitle: 'Forgot Password', errorMessage: message(req), oldInput: oldInput(req)});
+// 	}
+// };
 
 exports.forgotPassword = (req, res, next) => {
 	const validationErrors = [];
 	if (!validator.isEmail(req.body.email)) validationErrors.push('Please enter a valid email address.');
 
 	if (validationErrors.length) {
-		req.flash('error', validationErrors);
+		//req.flash('error', validationErrors);
 		return res.redirect('/forgot-password');
 	}
 	crypto.randomBytes(32, (err, buffer) => {
@@ -182,7 +163,7 @@ exports.forgotPassword = (req, res, next) => {
 			})
 			.then(user => {
 				if(!user){
-					req.flash('error', 'No user found with that email');
+					//req.flash('error', 'No user found with that email');
 					return res.redirect('/forgot-password');
 				}
 				user.resetToken = token;
