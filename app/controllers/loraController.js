@@ -2,11 +2,183 @@ const jwt = require("jsonwebtoken");
 const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
-const auth = require("../middlewares/isAuth");
+
 const express = require("express");
 const FormData = require("form-data");
 const axios = require("axios");
-const app = express();
+
+const uploadDirectory = "uploads/";
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    // 사용자의 아이디 값을 가져옵니다. 여기서는 토큰에서 아이디 값을 추출한다고 가정합니다.
+    let userId = req.userId;
+
+    // 사용자 아이디에 해당하는 폴더 경로를 생성합니다.
+    let userUploadDirectory = path.join(uploadDirectory, userId.toString());
+
+    // 해당 경로가 존재하지 않으면 폴더를 생성합니다.
+    if (!fs.existsSync(userUploadDirectory)) {
+      fs.mkdirSync(userUploadDirectory, { recursive: true });
+    }
+
+    // 파일이 저장될 최종 경로를 설정합니다.
+    cb(null, userUploadDirectory);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+const multerFile = multer({ storage });
+
+// 파일 필터링 함수 설정 (이미지 파일만 허용)
+
+// 업로드 인스턴스 생성
+exports.upload = (req, res, next) => {
+  let token = req.headers.authorization.split(" ")[1];
+
+  try {
+    let payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    console.log("토큰 인증 성공", payload);
+    // 토큰 인증 성공한 경우 파일 업로드를 처리합니다.
+    multerFile.array("images")(req, res, (err) => {
+
+      if (err) {
+        console.log(err);
+        res.status(400).send("Error uploading files.");
+      } else {
+        // 파일 정보를 반환합니다.
+        console.log(req.body);
+        console.log(payload);
+        res.send(req.file);
+      }
+    });
+  } catch (err) {
+    console.log("인증 에러");
+    res.status(405).json({ msg: "error" });
+    next();
+  }
+};
+
+exports.generateLora = (req, res, next) => {
+  // 사용자 ID를 FormData에 추가 (토큰 값 사용)
+  let userId = req.userId;
+  if (!userId) {
+    return res.status(400).send("No user ID");
+  }
+  //path like this uploads/4_${timestamp
+  //if path  does not exist, create it
+
+  let imagePath = `${uploadDirectory}${userId}`;
+  let payload = {};
+  if (!fs.existsSync(imagePath)) {
+    fs.mkdirSync(imagePath, { recursive: true });
+  }
+  //파일 존재 시 삭제
+  if( fs.existsSync(imagePath)){
+    fs.readdir(imagePath, (err, files) => {
+      if (err) {
+        console.error("Error reading directory:", err);
+        return res.status(500).send("Error reading directory");
+      }
+      for (const file of files) {
+        fs.unlinkSync(path.join(imagePath, file));
+      }
+    });
+  }
+
+  // 현재 파일의 개수
+
+  multerFile.array("images", 20)(req, res, (err) => {
+    if (err) {
+      console.log(err);
+      res.status(400).send("Error uploading files.");
+    } else {
+      console.log(req.body);
+      console.log(payload);
+
+      fs.readdir(imagePath, (err, files) => {
+        if (err) {
+          console.error("Error reading directory:", err);
+          return res.status(500).send("Error reading directory");
+        }
+
+        const url = "http://203.252.161.106:4000/generateModel";
+
+        // FormData 객체 생성
+        var formData = new FormData();
+        formData.append("id", userId);
+
+
+        // 파일 정보를 FormData에 추가
+        files.forEach((file) => {
+          formData.append(
+            "files",
+            fs.createReadStream(path.join(imagePath, file))
+          );
+        });
+
+        // POST 요청 보내기
+        axios
+          .post(url, formData, {
+            headers: {
+              ...formData.getHeaders(),
+              // 다른 헤더들도 필요하면 여기에 추가
+            },
+          })
+          .then((response) => {
+            console.log("Response:", response.data);
+            res.status(200).send(response.data);
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            res.status(500).send("Error sending request");
+          });
+      });
+    }
+  });
+};
+
+exports.createImage = async (req, res, next) => {
+  var item = req.body;
+  var numFiles = 0;
+  var result = [];
+  var randSeed =
+    Math.floor(Math.random() * (9999999999 - 1000000000 + 1)) + 1000000000;
+  if (item.prompt == undefined || item.prompt == null) {
+    res.send("no prompt");
+    return;
+  }
+  for (const i of Array.from(item.prompt)) {
+    let targetPayload;
+    if (i.includes("...up...scaling...")) {
+      targetPayload = payloadUpscale;
+    } else {
+      targetPayload = payload;
+    }
+
+    if (i.includes("girl")) {
+      targetPayload.prompt = prompt_girl + i;
+    } else {
+      targetPayload.prompt = prompt_boy + i;
+    }
+
+    targetPayload.seed = randSeed;
+    console.log("==========================================");
+    console.log(JSON.stringify(targetPayload));
+    console.log("==========================================");
+
+    const asdf = await callFunction(targetPayload, numFiles);
+    if (!asdf) {
+      return res.json({ err: "no res" });
+    }
+
+    result.push("data:image/png;base64," + asdf);
+    numFiles = numFiles + 1;
+  }
+  res.json({ images: result });
+};
 
 const payload = {
   prompt: "",
@@ -60,201 +232,4 @@ const payload = {
       ],
     },
   },
-};
-
-const uploadDirectory = "uploads/";
-
-function getUserIdFromToken(token) {
-  // 여기서는 단순히 토큰의 두 번째 부분을 사용자 아이디로 가정합니다.
-  return token.split(" ")[1];
-}
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // 사용자의 아이디 값을 가져옵니다. 여기서는 토큰에서 아이디 값을 추출한다고 가정합니다.
-    let userId = getUserIdFromToken(req.headers.authorization);
-
-    // 사용자 아이디에 해당하는 폴더 경로를 생성합니다.
-    let userUploadDirectory = path.join(uploadDirectory, userId);
-
-    // 해당 경로가 존재하지 않으면 폴더를 생성합니다.
-    if (!fs.existsSync(userUploadDirectory)) {
-      fs.mkdirSync(userUploadDirectory, { recursive: true });
-    }
-
-    // 파일이 저장될 최종 경로를 설정합니다.
-    cb(null, userUploadDirectory);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-
-const upload = multer({ storage });
-
-// 파일 필터링 함수 설정 (이미지 파일만 허용)
-
-// 업로드 인스턴스 생성
-exports.upload = (req, res, next) => {
-  let token = req.headers.authorization.split(" ")[1];
-
-  try {
-    let payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    console.log("토큰 인증 성공", payload);
-    // 토큰 인증 성공한 경우 파일 업로드를 처리합니다.
-    upload.array("images", 5)(req, res, (err) => {
-      if (err) {
-        console.log(err);
-        res.status(400).send("Error uploading files.");
-      } else {
-        // 파일 정보를 반환합니다.
-        console.log(req.body);
-        console.log(payload);
-        res.send(req.file);
-      }
-    });
-  } catch (err) {
-    console.log("인증 에러");
-    res.status(405).json({ msg: "error" });
-    next();
-  }
-};
-
-// // 파일을 읽어와서 요청을 보내는 작업 수행
-// exports.generateLora = (req,res,next) => {
-//   // 사용자 ID를 FormData에 추가 (토큰 값 사용)
-//   let token = req.headers.authorization.split(' ')[1];
-//   let payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-//   console.log('토큰 인증 성공', payload);
-//   let directory = path.join('uploads', token);
-
-//   // fs.readdir(directory, (err, files) => {
-//   //   if (err) {
-//   //     console.error('Error reading directory:', err);
-//   //     return callback(err);
-//   //   }
-//   //   callback(null, files);
-//   // });
-
-//   const url = 'http://203.252.161.106:4000/generateModel';
-
-//   // FormData 객체 생성
-//   const formData = new FormData();
-//   formData.append('id', payload.id);
-//   // 파일 정보를 FormData에 추가
-
-//   files.forEach(file => {
-//     formData.append('files', fs.createReadStream(path.join(uploadDirectory, file)));
-//   });
-
-//   // POST 요청 보내기
-
-//   res=axios.post(url, formData, {
-//     headers: {
-//       ...formData.getHeaders(),
-//       // 다른 헤더들도 필요하면 여기에 추가
-//     }
-//   })
-//   .then(response => {
-//     console.log('Response:', response.data);
-//   })
-//   .catch(error => {
-//     console.error('Error:', error);
-//   });
-
-// }
-
-exports.generateLora = (req, res, next) => {
-  // 사용자 ID를 FormData에 추가 (토큰 값 사용)
-  let token = req.headers.authorization.split(" ")[1];
-  let payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-  console.log("토큰 인증 성공", payload);
-  let directory = path.join("uploads", token);
-
-  upload.array("images", 5)(req, res, (err) => {
-    if (err) {
-      console.log(err);
-      res.status(400).send("Error uploading files.");
-    } else {
-      // 파일 정보를 반환합니다.
-      console.log(req.body);
-      console.log(payload);
-      //res.send(req.file);
-    }
-  });
-
-  fs.readdir(directory, (err, files) => {
-    if (err) {
-      console.error("Error reading directory:", err);
-      return res.status(500).send("Error reading directory");
-    }
-
-    const url = "http://203.252.161.106:4000/generateModel";
-
-    // FormData 객체 생성
-    const formData = new FormData();
-    formData.append("id", payload.id);
-
-    // 파일 정보를 FormData에 추가
-    files.forEach((file) => {
-      formData.append("files", fs.createReadStream(path.join(directory, file)));
-    });
-
-    // POST 요청 보내기
-    axios
-      .post(url, formData, {
-        headers: {
-          ...formData.getHeaders(),
-          // 다른 헤더들도 필요하면 여기에 추가
-        },
-      })
-      .then((response) => {
-        console.log("Response:", response.data);
-        res.status(200).send(response.data);
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        res.status(500).send("Error sending request");
-      });
-  });
-};
-
-exports.make = async (req, res, next) => {
-  var item = req.body;
-  var numFiles = 0;
-  var result = [];
-  var randSeed =
-    Math.floor(Math.random() * (9999999999 - 1000000000 + 1)) + 1000000000;
-  if (item.prompt == undefined || item.prompt == null) {
-    res.send("no prompt");
-    return;
-  }
-  for (const i of Array.from(item.prompt)) {
-    let targetPayload;
-    if (i.includes("...up...scaling...")) {
-      targetPayload = payloadUpscale;
-    } else {
-      targetPayload = payload;
-    }
-
-    if (i.includes("girl")) {
-      targetPayload.prompt = prompt_girl + i;
-    } else {
-      targetPayload.prompt = prompt_boy + i;
-    }
-
-    targetPayload.seed = randSeed;
-    console.log("==========================================");
-    console.log(JSON.stringify(targetPayload));
-    console.log("==========================================");
-
-    const asdf = await callFunction(targetPayload, numFiles);
-    if (!asdf) {
-      return res.json({ err: "no res" });
-    }
-
-    result.push("data:image/png;base64," + asdf);
-    numFiles = numFiles + 1;
-  }
-  res.json({ images: result });
 };

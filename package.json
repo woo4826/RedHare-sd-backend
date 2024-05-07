@@ -1,12 +1,11 @@
 {
-  "name": "node-express-mysql-boilerplate",
-  "version": "1.0.0",
-  "description": "A boilerplate for Node.js web applications with express and MySQL",
+  "name": "Redhare-Backend",
+  "version": "2.0.0",
+  "description": "Backend for Redhare Stable Diffusion Project",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon index.js",
-    "postinstall": "cp .env-example .env"
+    "start": "NODE_ENV=production nodemon index.js",
+    "dev":   "NODE_ENV=development nodemon index.js"
   },
   "author": "Mangesh Ghadigaonkar",
   "license": "ISC",
@@ -19,6 +18,7 @@
     "body-parser": "^1.19.0",
     "connect-session-sequelize": "^7.0.1",
     "cookie-parser": "^1.4.6",
+    "cross-env": "^7.0.3",
     "crypto": "^1.0.1",
     "csurf": "^1.11.0",
     "dotenv": "^8.6.0",
@@ -29,7 +29,7 @@
     "form-data": "^4.0.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
-    "mysql2": "^2.1.0",
+    "mysql2": "^3.9.7",
     "sequelize": "^6.3.4",
     "validator": "^13.1.1"
   }

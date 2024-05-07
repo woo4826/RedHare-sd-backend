@@ -9,10 +9,10 @@ const User = sequelize.define('users', {
 			allowNull: false,
 			primaryKey: true
 		},
-		fullName: DataTypes.STRING,
 		email: {
 			type: DataTypes.STRING,
-			allowNull: false
+			allowNull: false,
+			unique: true
 		},
 		password: {
 			type: DataTypes.STRING,
@@ -23,14 +23,7 @@ const User = sequelize.define('users', {
 			allowNull: true
 		}
   	},
-	{
-		indexes: [
-			// Create a unique index on email
-			{
-				unique: true,
-				fields: ['email']
-			}],
-	});
+	);
 
 
 
