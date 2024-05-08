@@ -1,4 +1,4 @@
-const { Sequelize, DataTypes } = require('sequelize');
+const {  DataTypes } = require('sequelize');
 const sequelize = require('../../config/database');
 
 const CustomizedModel = sequelize.define('Customized_Model', {
@@ -14,7 +14,7 @@ const CustomizedModel = sequelize.define('Customized_Model', {
     },
     uuid: {
         type: DataTypes.UUID,
-        defaultValue: Sequelize.UUIDV4,
+        defaultValue: DataTypes.UUIDV4,
         allowNull: false,
         unique: true
     }

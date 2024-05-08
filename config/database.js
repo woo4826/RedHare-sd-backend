@@ -2,6 +2,8 @@ const Sequelize = require("sequelize");
 const env = require("dotenv");
 env.config();
 
+
+
 //if prod mode use DB_HOST, DB_DATABASE, DB_PORT, DB_USERNAME, DB_PASSWORD from .env file
 //if dev mode use DB_DEV_HOST, DB_DEV_DATABASE, DB_DEV_PORT, DB_DEV_USERNAME, DB_DEV_PASSWORD from .env file
 
@@ -25,3 +27,4 @@ const sequelize = new Sequelize(DB_DATABASE, DB_USERNAME, DB_PASSWORD, {
 });
 
 module.exports = sequelize;
+
