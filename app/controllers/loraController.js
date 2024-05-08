@@ -9,6 +9,8 @@ const axios = require("axios");
 
 const uploadDirectory = "uploads/";
 
+const CMG_URL = "http://203.252.161.106:4000";
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     // 사용자의 아이디 값을 가져옵니다. 여기서는 토큰에서 아이디 값을 추출한다고 가정합니다.
@@ -32,16 +34,10 @@ const storage = multer.diskStorage({
 
 const multerFile = multer({ storage });
 
-// 파일 필터링 함수 설정 (이미지 파일만 허용)
-
-// 업로드 인스턴스 생성
-exports.upload = (req, res, next) => {
+exports.uploadImage = (req, res, next) => {
   let token = req.headers.authorization.split(" ")[1];
 
   try {
-    let payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    console.log("토큰 인증 성공", payload);
-    // 토큰 인증 성공한 경우 파일 업로드를 처리합니다.
     multerFile.array("images")(req, res, (err) => {
 
       if (err) {
@@ -62,12 +58,11 @@ exports.upload = (req, res, next) => {
 };
 
 exports.generateLora = (req, res, next) => {
-  // 사용자 ID를 FormData에 추가 (토큰 값 사용)
   let userId = req.userId;
   if (!userId) {
     return res.status(400).send("No user ID");
   }
-  //path like this uploads/4_${timestamp
+  //path like this uploads/4
   //if path  does not exist, create it
 
   let imagePath = `${uploadDirectory}${userId}`;
@@ -75,7 +70,6 @@ exports.generateLora = (req, res, next) => {
   if (!fs.existsSync(imagePath)) {
     fs.mkdirSync(imagePath, { recursive: true });
   }
-  //파일 존재 시 삭제
   if( fs.existsSync(imagePath)){
     fs.readdir(imagePath, (err, files) => {
       if (err) {
@@ -87,8 +81,6 @@ exports.generateLora = (req, res, next) => {
       }
     });
   }
-
-  // 현재 파일의 개수
 
   multerFile.array("images", 20)(req, res, (err) => {
     if (err) {
@@ -103,28 +95,18 @@ exports.generateLora = (req, res, next) => {
           console.error("Error reading directory:", err);
           return res.status(500).send("Error reading directory");
         }
-
-        const url = "http://203.252.161.106:4000/generateModel";
-
-        // FormData 객체 생성
         var formData = new FormData();
         formData.append("id", userId);
-        
-
-        // 파일 정보를 FormData에 추가
         files.forEach((file) => {
           formData.append(
             "files",
             fs.createReadStream(path.join(imagePath, file))
           );
         });
-
-        // POST 요청 보내기
         axios
-          .post(url, formData, {
+          .post(CMG_URL + "/generate", formData, {
             headers: {
               ...formData.getHeaders(),
-              // 다른 헤더들도 필요하면 여기에 추가
             },
           })
           .then((response) => {
