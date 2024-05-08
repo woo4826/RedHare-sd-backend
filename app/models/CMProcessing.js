@@ -1,4 +1,4 @@
-const { Sequelize, DataTypes } = require('sequelize');
+const {  DataTypes } = require('sequelize');
 const sequelize = require('../../config/database');
 
 const CMProcessing = sequelize.define('CMProcessing', {
@@ -10,7 +10,7 @@ const CMProcessing = sequelize.define('CMProcessing', {
   },
   uuid: {
     type: DataTypes.UUID,
-    defaultValue: Sequelize.UUIDV4,
+    defaultValue: DataTypes.UUIDV4,
     allowNull: false,
     unique: true
   },
