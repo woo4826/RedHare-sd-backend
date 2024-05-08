@@ -109,7 +109,7 @@ exports.generateLora = (req, res, next) => {
         // FormData 객체 생성
         var formData = new FormData();
         formData.append("id", userId);
-
+        
 
         // 파일 정보를 FormData에 추가
         files.forEach((file) => {
