@@ -12,11 +12,9 @@ const CustomizedModel = sequelize.define('Customized_Model', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    uuid: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        allowNull: false,
-        unique: true
+    independent_key: {
+        allowNull: false.valueOf,
+        type: DataTypes.STRING
     }
 },
 {

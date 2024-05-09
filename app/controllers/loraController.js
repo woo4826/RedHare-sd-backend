@@ -2,10 +2,17 @@ const jwt = require("jsonwebtoken");
 const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
+const { v4: uuidv4 } = require("uuid");
+
+const fetch = require("node-fetch");
 
 const express = require("express");
-const FormData = require("form-data");
+const FormData = require('form-data');
+
 const axios = require("axios");
+
+const CModel = require("../models/CustomizedModel");
+const { Model, UUID } = require("sequelize");
 
 const uploadDirectory = "uploads/";
 
@@ -39,7 +46,6 @@ exports.uploadImage = (req, res, next) => {
 
   try {
     multerFile.array("images")(req, res, (err) => {
-
       if (err) {
         console.log(err);
         res.status(400).send("Error uploading files.");
@@ -58,7 +64,7 @@ exports.uploadImage = (req, res, next) => {
 };
 
 exports.generateLora = (req, res, next) => {
-  let userId = req.userId;
+  const userId = req.userId;
   if (!userId) {
     return res.status(400).send("No user ID");
   }
@@ -70,7 +76,7 @@ exports.generateLora = (req, res, next) => {
   if (!fs.existsSync(imagePath)) {
     fs.mkdirSync(imagePath, { recursive: true });
   }
-  if( fs.existsSync(imagePath)){
+  if (fs.existsSync(imagePath)) {
     fs.readdir(imagePath, (err, files) => {
       if (err) {
         console.error("Error reading directory:", err);
@@ -81,34 +87,42 @@ exports.generateLora = (req, res, next) => {
       }
     });
   }
-
   multerFile.array("images", 20)(req, res, (err) => {
     if (err) {
       console.log(err);
       res.status(400).send("Error uploading files.");
     } else {
-      console.log(req.body);
-      console.log(payload);
-
       fs.readdir(imagePath, (err, files) => {
         if (err) {
           console.error("Error reading directory:", err);
           return res.status(500).send("Error reading directory");
         }
-        var formData = new FormData();
-        formData.append("id", userId);
-        files.forEach((file) => {
-          formData.append(
-            "files",
-            fs.createReadStream(path.join(imagePath, file))
-          );
-        });
+
+        var ikey = uuidv4();
+        const formData = new FormData();
+
+        // files.forEach((file) => {
+        //   formData.append(
+        //     "files",
+        //     //여기잘 보셈
+
+        //     file
+        //     // fs.createReadStream(imagePath)
+        //   );
+        // });
+        console.log(files.length);
+        //formData.append('files',files[0]);
+        console.log(files);
+        for (let i = 0; i < files.length; i++) {
+          formData.append("files", files[i]);
+        }
+        formData.append("user_id", userId);
+
+        formData.append("independent_key", ikey);
+        console.log(formData.getAll("files"));
+
         axios
-          .post(CMG_URL + "/generate", formData, {
-            headers: {
-              ...formData.getHeaders(),
-            },
-          })
+          .post(CMG_URL + "/model", formData)
           .then((response) => {
             console.log("Response:", response.data);
             res.status(200).send(response.data);
@@ -117,7 +131,15 @@ exports.generateLora = (req, res, next) => {
             console.error("Error:", error);
             res.status(500).send("Error sending request");
           });
+        // const model = await CModel.create({
+        //   user_id: req.userId,
+        //   independent_key : ikey
+        // });
       });
+
+      for (const [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
     }
   });
 };
