@@ -1,34 +1,32 @@
 const User = require('../models/User');
 
 //
-// router.get("/user/:uid", auth.checkToken, UserController.getUserById);
+// router.get("/user/:id", auth.checkToken, UserController.getUserById);
 // router.get("/users", auth.checkToken, UserController.getAllUsers);
-// router.put("/user/:uid", auth.checkToken, UserController.updateUser);
-// router.delete("/user/:uid", auth.checkToken, UserController.deleteUser);
+// router.put("/user/:id", auth.checkToken, UserController.updateUser);
+// router.delete("/user/:id", auth.checkToken, UserController.deleteUser);
 // //home router
 exports.getUserById = async (req, res) => {
-  User.findOne({ _id: req.params.uid }, function (err, user) {
-    if (err) {
-      console.log(err);
-      return res.status(401).json({
-        message: "User does not exist.",
-      });
-    }
+  console.log("여기노?");
+  console.log(req.params);
+  let user = await User.findOne({where : { id: req.params.id }})
+  
+  
+  
+ 
+    console.log("여기노?");
+    
     if (user) {
+      console.log("여기노?");
       console.log("logged in");
       return res.status(200).json({
         message: "user found",
-        uid: user._id,
+        id: user.id,
         email: user.email,
-        joined: user.created_At,
+        
       });
     }
-  }).catch((err) => {
-    console.log(err);
-    res.status(500).json({
-      error: err,
-    });
-  });
+  
 };
 
 
@@ -56,7 +54,7 @@ exports.getAllUsers = async (req, res) => {
 }
 
 exports.updateUser = async (req, res) => {
-  User.findOneAndUpdate({ _id: req.params.uid }, { email: req.body.email }, function (err, user) {
+  User.findOneAndUpdate({ _id: req.params.id }, { email: req.body.email }, function (err, user) {
     if (err) {
       console.log(err);
       return res.status(401).json({
@@ -67,7 +65,7 @@ exports.updateUser = async (req, res) => {
       console.log("logged in");
       return res.status(200).json({
         message: "user updated",
-        uid: user._id,
+        id: user._id,
         email: user.email,
         joined: user.created_At,
       });
@@ -81,7 +79,7 @@ exports.updateUser = async (req, res) => {
 }
 
 exports.deleteUser = async (req, res) => {
-  User.findOneAndDelete({ _id: req.params.uid }, function (err, user) {
+  User.findOneAndDelete({ _id: req.params.id }, function (err, user) {
     if (err) {
       console.log(err);
       return res.status(401).json({
@@ -92,7 +90,7 @@ exports.deleteUser = async (req, res) => {
       console.log("logged in");
       return res.status(200).json({
         message: "user deleted",
-        uid: user._id,
+        id: user._id,
         email: user.email,
         joined: user.created_At,
       });

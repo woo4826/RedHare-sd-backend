@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "NODE_ENV=production nodemon index.js",
-    "dev":   "NODE_ENV=development nodemon index.js"
+    "dev": "NODE_ENV=development nodemon index.js"
   },
   "author": "Mangesh Ghadigaonkar",
   "license": "ISC",
@@ -30,7 +30,9 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.9.7",
+    "node-fetch": "^2.7.0",
     "sequelize": "^6.3.4",
+    "uuid": "^9.0.1",
     "validator": "^13.1.1"
   }
 }

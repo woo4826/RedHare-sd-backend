@@ -7,17 +7,19 @@ const CMProcessing = sequelize.define('CMProcessing', {
     autoIncrement: true,
     allowNull: false,
     primaryKey: true
-  },
-  uuid: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
-    allowNull: false,
-    unique: true
-  },
-  status: {
+},
+user_id: {
+  type: DataTypes.INTEGER,
+  allowNull: false
+},
+independent_key: {
     type: DataTypes.STRING,
     allowNull: false
-  }
+},
+status: {
+    type: DataTypes.STRING,
+    allowNull: false
+}
 }, {
 });
 
