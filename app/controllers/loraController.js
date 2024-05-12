@@ -7,12 +7,13 @@ const { v4: uuidv4 } = require("uuid");
 const fetch = require("node-fetch");
 
 const express = require("express");
-const FormData = require('form-data');
+const FormData = require("form-data");
 
 const axios = require("axios");
 
 const CModel = require("../models/CustomizedModel");
 const { Model, UUID } = require("sequelize");
+const { isMimeType } = require("validator");
 
 const uploadDirectory = "uploads/";
 
@@ -45,7 +46,7 @@ exports.uploadImage = (req, res, next) => {
   let token = req.headers.authorization.split(" ")[1];
 
   try {
-    multerFile.array("images")(req, res, (err) => {
+    multerFile.array("files")(req, res, (err) => {
       if (err) {
         console.log(err);
         res.status(400).send("Error uploading files.");
@@ -113,13 +114,19 @@ exports.generateLora = (req, res, next) => {
         console.log(files.length);
         //formData.append('files',files[0]);
         console.log(files);
-        for (let i = 0; i < files.length; i++) {
-          formData.append("files", files[i]);
+        for (var f in files) {
+          formData.append(
+            "files",
+            fs.createReadStream(path.join(imagePath, files[f]))
+          );
         }
+        // for (let i = 0; i < files.length; i++) {
+        //   formData.append("files", files[i]);
+        // }
         formData.append("user_id", userId);
 
         formData.append("independent_key", ikey);
-        console.log(formData.getAll("files"));
+        // console.log(formData.getAll("files"));
 
         axios
           .post(CMG_URL + "/model", formData)
@@ -137,11 +144,25 @@ exports.generateLora = (req, res, next) => {
         // });
       });
 
-      for (const [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
+      // for (const [key, value] of formData.entries()) {
+      //   console.log(key, value);
+      // }
     }
   });
+};
+
+exports.getModels = async (req, res, next) => {
+  const userId = req.userId;
+  axios
+    .get(CMG_URL + "/model" + "?user_id=" + userId)
+    .then((response) => {
+      console.log("Response:", response.data);
+      res.status(200).send(response.data);
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      res.status(500).send("Error sending request");
+    });
 };
 
 exports.createImage = async (req, res, next) => {
@@ -154,42 +175,41 @@ exports.createImage = async (req, res, next) => {
     res.send("no prompt");
     return;
   }
-  for (const i of Array.from(item.prompt)) {
-    let targetPayload;
-    if (i.includes("...up...scaling...")) {
-      targetPayload = payloadUpscale;
-    } else {
-      targetPayload = payload;
-    }
 
-    if (i.includes("girl")) {
-      targetPayload.prompt = prompt_girl + i;
-    } else {
-      targetPayload.prompt = prompt_boy + i;
-    }
+  let targetPayload;
 
-    targetPayload.seed = randSeed;
-    console.log("==========================================");
-    console.log(JSON.stringify(targetPayload));
-    console.log("==========================================");
-
-    const asdf = await callFunction(targetPayload, numFiles);
-    if (!asdf) {
-      return res.json({ err: "no res" });
-    }
-
-    result.push("data:image/png;base64," + asdf);
-    numFiles = numFiles + 1;
+  targetPayload = payload;
+  if (item.modelName.includes("1_edc90329")) {
+    targetPayload.prompt = base_prompt + item.prompt + "<lora:iu_v35:1>";
+  } else {
+    targetPayload.prompt = base_prompt + item.prompt + "<lora:aespakarina-v5:1>";
   }
-  res.json({ images: result });
+  // targetPayload.prompt = base_prompt + i + "<lora:"+ req.modelName + ":0.8>";
+
+  targetPayload.seed = randSeed;
+  console.log("==========================================");
+  console.log(JSON.stringify(targetPayload));
+  console.log("==========================================");
+
+  const asdf = await callFunction(targetPayload, numFiles);
+  if (!asdf) {
+    return res.json({ err: "no res" });
+  }
+
+  result.push("data:image/png;base64," + asdf);
+
+  res.send(result[0]);
 };
+
+const base_prompt =
+  "(id photo:1.2), (upper body:1.2), (masterpiece,best quality,ultra_detailed,highres,absurdres:1.2),extremely detailed CG unity 8k wallpaper <lora:add_detail:1>";
 
 const payload = {
   prompt: "",
   negative_prompt:
     "bad anatomy, bad proportions, blurry, cloned face, deformed, disfigured, duplicate, extra arms, extra fingers, extra limbs, extra legs, fused fingers, gross proportions, long neck, malformed limbs, missing arms, missing legs, mutated hands, mutation, mutilated, morbid, out of frame, poorly drawn hands, poorly drawn face, too many fingers, ugly, ugly, duplicate, morbid, mutilated, out of frame, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, ugly, blurry, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, out of frame, ugly, extra limbs, bad anatomy, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, mutated hands, fused fingers, too many fingers, long neck, (worst quality, normal quality, low quality:1.5) , ((nsfw))",
   steps: 20,
-  sampler_name: "DPM++ 2M Karras",
+  sampler_name: "DPM++ SDE Karras",
   "cfg-scale": 7,
   seed: "-1",
   alwayson_scripts: {
@@ -236,4 +256,57 @@ const payload = {
       ],
     },
   },
+};
+
+// function base64ToPNG(data) {
+//   data = data.replace(/^data:image\/png;base64,/, '');
+
+//   fs.writeFile(path.resolve(__dirname, 'public/images/image.png'), data, 'base64', function(err) {
+//     if (err) throw err;
+//   });
+// }
+callFunction = async (payload, num) => {
+  const url = "http://203.252.161.106:7860";
+
+  const optionPayload = {
+    sd_model_checkpoint: "magic.safetensors [7c819b6d13]",
+  };
+
+  const optionResponse = await fetch(`${url}/sdapi/v1/options`, {
+    method: "POST",
+    body: JSON.stringify(optionPayload),
+    headers: { "Content-Type": "application/json" },
+  });
+
+  try {
+    const response = await fetch(`${url}/sdapi/v1/txt2img`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const responseData = await response.json();
+
+    const rawImage = responseData["images"][0].split(",", 1)[0];
+
+    //base64ToPNG(rawImage);
+
+    const pngPayload = {
+      image: "data:image/png;base64," + rawImage,
+    };
+
+    const response2 = await fetch(`${url}/sdapi/v1/png-info`, {
+      method: "POST",
+      body: JSON.stringify(pngPayload),
+      headers: { "Content-Type": "application/json" },
+    });
+    const pngInfo = await response2.json();
+
+    console.log("image success");
+
+    return rawImage;
+  } catch (error) {
+    console.error("Connection error occurred");
+    throw error;
+  }
 };
