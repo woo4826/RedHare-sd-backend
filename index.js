@@ -16,18 +16,10 @@ const CustomizedModel = require("./app/models/CustomizedModel");
 
 env.config();
 // configure the app to use bodyParser()
-app.use(
-  bodyParser.urlencoded({
-    extended: true,
-  })
-);
-app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 app.use(express.static(path.join(__dirname, "public")));
-
-app.use((req, res, next) => {
-  next();
-});
 
 app.use(router);
 app.use(loraRoutes);
