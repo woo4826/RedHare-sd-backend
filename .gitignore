@@ -9,5 +9,5 @@ yarn-error.log
 .jpeg
 .gif
 .vscode/settings.json
-/uploads/
+/uploads
 *
