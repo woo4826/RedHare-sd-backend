@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
     let imagePath = req.imagePath;
 
     // 사용자 아이디에 해당하는 폴더 경로를 생성합니다.
-    let userUploadDirectory = path.join( imagePath);
+    let userUploadDirectory = path.join(imagePath);
 
     // 해당 경로가 존재하지 않으면 폴더를 생성합니다.
     if (!fs.existsSync(userUploadDirectory)) {
@@ -100,7 +100,6 @@ exports.generateLora = (req, res, next) => {
           return res.status(500).send("Error reading directory");
         }
 
-        
         const formData = new FormData();
 
         // files.forEach((file) => {
@@ -129,27 +128,28 @@ exports.generateLora = (req, res, next) => {
         formData.append("independent_key", ikey);
         // console.log(formData.getAll("files"));
         var filename;
-        fs.readdir(imagePath,  function(error, filelist){
-          filename=filelist[0];
-          formData.append("thumbnail_image",imagePath.toString()+"/"+filename);
+        fs.readdir(imagePath, function (error, filelist) {
+          filename = filelist[0];
+          formData.append(
+            "thumbnail_image",
+            imagePath.toString() + "/" + filename
+          );
           //console.log(filelist[0]);
           console.log("dfdf");
-        console.log(imagePath.toString()+filename);
-        console.log("afaf");
-        axios
-          .post(CMG_URL + "/model", formData)
-          .then((response) => {
-            console.log("Response:", response.data);
-            res.status(200).send(response.data);
-          })
-          .catch((error) => {
-            console.error("Error:", error);
-            res.status(500).send("Error sending request");
-          });
-        })
-        
-        
-        
+          console.log(imagePath.toString() + filename);
+          console.log("afaf");
+          axios
+            .post(CMG_URL + "/model", formData)
+            .then((response) => {
+              console.log("Response:", response.data);
+              res.status(200).send(response.data);
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              res.status(500).send("Error sending request");
+            });
+        });
+
         // const model = await CModel.create({
         //   user_id: req.userId,
         //   independent_key : ikey
@@ -194,7 +194,8 @@ exports.createImage = async (req, res, next) => {
   if (item.modelName.includes("1_edc90329")) {
     targetPayload.prompt = base_prompt + item.prompt + "<lora:iu_v35:1>";
   } else {
-    targetPayload.prompt = base_prompt + item.prompt + "<lora:aespakarina-v5:1>";
+    targetPayload.prompt =
+      base_prompt + item.prompt + "<lora:aespakarina-v5:1>";
   }
   // targetPayload.prompt = base_prompt + i + "<lora:"+ req.modelName + ":0.8>";
 
