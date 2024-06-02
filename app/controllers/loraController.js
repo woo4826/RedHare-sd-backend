@@ -17,8 +17,8 @@ const { Model, UUID } = require("sequelize");
 const { isMimeType } = require("validator");
 const User = require("../models/User");
 
-
 const uploadDirectory = "uploads/";
+const videoUploadDirectory = "videos/";
 
 const CMG_URL = "http://localhost:4000";
 
@@ -77,7 +77,6 @@ exports.generateLora = (req, res, next) => {
   var ikey = uuidv4();
   let imagePath = `${uploadDirectory}${userId}_${ikey}`;
   req.imagePath = imagePath;
-  let payload = {};
   if (!fs.existsSync(imagePath)) {
     fs.mkdirSync(imagePath, { recursive: true });
   }
@@ -102,36 +101,15 @@ exports.generateLora = (req, res, next) => {
           console.error("Error reading directory:", err);
           return res.status(500).send("Error reading directory");
         }
-
         const formData = new FormData();
-
-        // files.forEach((file) => {
-        //   formData.append(
-        //     "files",
-        //     //여기잘 보셈
-
-        //     file
-        //     // fs.createReadStream(imagePath)
-        //   );
-        // });
-        console.log(files.length);
-        //formData.append('files',files[0]);
-        console.log(files);
         for (var f in files) {
           formData.append(
             "files",
             fs.createReadStream(path.join(imagePath, files[f]))
           );
         }
-        // for (let i = 0; i < files.length; i++) {
-        //   formData.append("files", files[i]);
-        // }
-
-
         formData.append("user_id", userId);
-
         formData.append("independent_key", ikey);
-        // console.log(formData.getAll("files"));
         var filename;
         fs.readdir(imagePath, function (error, filelist) {
           filename = filelist[0];
@@ -140,10 +118,7 @@ exports.generateLora = (req, res, next) => {
             imagePath.toString() + "/" + filename
           );
           formData.append("file_number", files.length);
-          //console.log(filelist[0]);
-          console.log("dfdf");
           console.log(imagePath.toString() + filename);
-          console.log("afaf");
           axios
             .post(CMG_URL + "/model", formData)
             .then((response) => {
@@ -155,32 +130,69 @@ exports.generateLora = (req, res, next) => {
               res.status(500).send("Error sending request");
             });
         });
-
-        // const model = await CModel.create({
-        //   user_id: req.userId,
-        //   independent_key : ikey
-        // });
       });
-
-      // for (const [key, value] of formData.entries()) {
-      //   console.log(key, value);
-      // }
     }
   });
 };
 
-exports.getModels = async (req, res, next) => {
+exports.generateLoraVideo = (req, res, next) => {
   const userId = req.userId;
-  axios
-    .get(CMG_URL + "/model" + "?user_id=" + userId)
-    .then((response) => {
-      console.log("Response:", response.data);
-      res.status(200).send(response.data);
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      res.status(500).send("Error sending request");
+  if (!userId) {
+    return res.status(400).send("No user ID");
+  }
+  //path like this uploads/4
+  //if path  does not exist, create it
+  var ikey = uuidv4();
+  let videoPath = `${videoUploadDirectory}${userId}_${ikey}`;
+  req.imagePath = videoPath;
+  if (!fs.existsSync(videoPath)) {
+    fs.mkdirSync(videoPath, { recursive: true });
+  }
+  if (fs.existsSync(videoPath)) {
+    fs.readdir(videoPath, (err, files) => {
+      if (err) {
+        console.error("Error reading directory:", err);
+        return res.status(500).send("Error reading directory");
+      }
+      for (const file of files) {
+        fs.unlinkSync(path.join(videoPath, file));
+      }
     });
+  }
+  multerFile.array("video")(req, res, (err) => {
+    if (err) {
+      console.log(err);
+      res.status(400).send("Error uploading files.");
+    } else {
+      fs.readdir(videoPath, (err, files) => {
+        if (err) {
+          console.error("Error reading directory:", err);
+          return res.status(500).send("Error reading directory");
+        }
+        const formData = new FormData();
+
+        formData.append("user_id", userId);
+        formData.append("independent_key", ikey);
+        formData.append("interval", "90");
+        formData.append('video',fs.createReadStream(path.join(videoPath, files[0])) );
+        var filename;
+        fs.readdir(videoPath, function (error, filelist) {
+          filename = filelist[0];
+
+          axios
+            .post(CMG_URL + "/model/video", formData)
+            .then((response) => {
+              console.log("Response:", response.data);
+              return res.status(200).send(response.data);
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              return res.status(500).send("Error sending request");
+            });
+        });
+      });
+    }
+  });
 };
 
 exports.createImage = async (req, res, next) => {
@@ -199,7 +211,8 @@ exports.createImage = async (req, res, next) => {
   targetPayload = payload;
 
   targetPayload.prompt = base_prompt + item.prompt;
-  targetPayload.alwayson_scripts.ADetailer.args.ad_prompt = "<lora:"+ req.modelName + ":0.8>";
+  targetPayload.alwayson_scripts.ADetailer.args.ad_prompt =
+    "<lora:" + req.modelName + ":0.8>";
 
   targetPayload.seed = randSeed;
   console.log("==========================================");
@@ -219,11 +232,23 @@ exports.createImage = async (req, res, next) => {
 exports.getImage = (req, res, next) => {
   var imgPath = req.params.folder;
   var imgName = req.params.name;
-  var fullPath = path.join( "uploads/"+imgPath+ "/" + imgName)
-  console.log('이미지 요청: '+  fullPath);
-  res.sendFile(fullPath, { root: __dirname + "/../../" }); 
+  var fullPath = path.join("uploads/" + imgPath + "/" + imgName);
+  console.log("이미지 요청: " + fullPath);
+  res.sendFile(fullPath, { root: __dirname + "/../../" });
 };
-
+exports.getModels = async (req, res, next) => {
+  var userId = req.userId;
+  axios
+    .get(CMG_URL + "/model" + "?user_id=" + userId)
+    .then((response) => {
+      console.log("Response:", response.data);
+      return res.status(200).send(response.data);
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      return res.status(500).send("Error sending request");
+    });
+};
 
 exports.update_nickname = async (req, res) => {
   try {
@@ -241,16 +266,12 @@ exports.update_nickname = async (req, res) => {
       { where: { independent_key: req.body.independent_key } } // where 절
     );
 
-
     res.send(req.body.cm_nickname);
-    
   } catch (error) {
     console.error("Error updating nickname:", error);
     res.status(500).send("Error updating nickname");
   }
 };
-
-
 
 const base_prompt =
   "(id photo:1.2), (upper body:1.2), (masterpiece,best quality,ultra_detailed,highres,absurdres:1.2),extremely detailed CG unity 8k wallpaper <lora:add_detail:1>,";
