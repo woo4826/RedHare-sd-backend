@@ -12,12 +12,15 @@ const FormData = require("form-data");
 const axios = require("axios");
 
 const CModel = require("../models/CustomizedModel");
+const CMProcessing = require("../models/CMProcessing");
 const { Model, UUID } = require("sequelize");
 const { isMimeType } = require("validator");
+const User = require("../models/User");
+
 
 const uploadDirectory = "uploads/";
 
-const CMG_URL = "http://203.252.161.106:4000";
+const CMG_URL = "http://localhost:4000";
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -123,6 +126,8 @@ exports.generateLora = (req, res, next) => {
         // for (let i = 0; i < files.length; i++) {
         //   formData.append("files", files[i]);
         // }
+
+
         formData.append("user_id", userId);
 
         formData.append("independent_key", ikey);
@@ -134,6 +139,7 @@ exports.generateLora = (req, res, next) => {
             "thumbnail_image",
             imagePath.toString() + "/" + filename
           );
+          formData.append("file_number", files.length);
           //console.log(filelist[0]);
           console.log("dfdf");
           console.log(imagePath.toString() + filename);
@@ -191,13 +197,9 @@ exports.createImage = async (req, res, next) => {
   let targetPayload;
 
   targetPayload = payload;
-  if (item.modelName.includes("1_edc90329")) {
-    targetPayload.prompt = base_prompt + item.prompt + "<lora:iu_v35:1>";
-  } else {
-    targetPayload.prompt =
-      base_prompt + item.prompt + "<lora:aespakarina-v5:1>";
-  }
-  // targetPayload.prompt = base_prompt + i + "<lora:"+ req.modelName + ":0.8>";
+
+  targetPayload.prompt = base_prompt + item.prompt;
+  targetPayload.alwayson_scripts.ADetailer.args.ad_prompt = "<lora:"+ req.modelName + ":0.8>";
 
   targetPayload.seed = randSeed;
   console.log("==========================================");
@@ -213,9 +215,45 @@ exports.createImage = async (req, res, next) => {
 
   res.send(result[0]);
 };
+// /home/user/RedHare-sd-backend/uploads/1_2e10cbdb-85ef-43b9-9ba7-c02482c8f75d/1716974651964-아이유5.jpeg
+exports.getImage = (req, res, next) => {
+  var imgPath = req.params.folder;
+  var imgName = req.params.name;
+  var fullPath = path.join( "uploads/"+imgPath+ "/" + imgName)
+  console.log('이미지 요청: '+  fullPath);
+  res.sendFile(fullPath, { root: __dirname + "/../../" }); 
+};
+
+
+exports.update_nickname = async (req, res) => {
+  try {
+    // 로그 추가
+    console.log("Requested nickname:", req.body.cm_nickname);
+    console.log("Independent Key:", req.body.independent_key);
+
+    // 업데이트
+    const result1 = await CModel.update(
+      { cm_nickname: req.body.cm_nickname }, // 업데이트할 칼럼 정보
+      { where: { independent_key: req.body.independent_key } } // where 절
+    );
+    const result2 = await CMProcessing.update(
+      { cm_nickname: req.body.cm_nickname }, // 업데이트할 칼럼 정보
+      { where: { independent_key: req.body.independent_key } } // where 절
+    );
+
+
+    res.send(req.body.cm_nickname);
+    
+  } catch (error) {
+    console.error("Error updating nickname:", error);
+    res.status(500).send("Error updating nickname");
+  }
+};
+
+
 
 const base_prompt =
-  "(id photo:1.2), (upper body:1.2), (masterpiece,best quality,ultra_detailed,highres,absurdres:1.2),extremely detailed CG unity 8k wallpaper <lora:add_detail:1>";
+  "(id photo:1.2), (upper body:1.2), (masterpiece,best quality,ultra_detailed,highres,absurdres:1.2),extremely detailed CG unity 8k wallpaper <lora:add_detail:1>,";
 
 const payload = {
   prompt: "",
@@ -279,7 +317,7 @@ const payload = {
 //   });
 // }
 callFunction = async (payload, num) => {
-  const url = "http://203.252.161.106:7860";
+  const url = "http://redhare.ddns.net:6786";
 
   const optionPayload = {
     sd_model_checkpoint: "magic.safetensors [7c819b6d13]",

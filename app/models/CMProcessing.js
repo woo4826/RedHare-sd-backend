@@ -9,16 +9,28 @@ const CMProcessing = sequelize.define('CMProcessing', {
     primaryKey: true
 },
 user_id: {
-  type: DataTypes.INTEGER,
-  allowNull: false
+    type: DataTypes.INTEGER,
+    allowNull: false
 },
 independent_key: {
-    type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false.valueOf,
+    type: DataTypes.STRING
 },
-status: {
-    type: DataTypes.STRING,
-    allowNull: false
+thumbnail_image: {
+    allowNull: true.valueOf,
+    type: DataTypes.STRING
+},
+cm_nickname: {
+    allowNull: true.valueOf,
+    type: DataTypes.STRING
+},
+createdAt: {
+    allowNull: false.valueOf,
+    type: DataTypes.DATE
+},
+updateAt: {
+    allowNull: false.valueOf,
+    type: DataTypes.DATE
 }
 }, {
 });

@@ -1,0 +1,29 @@
+ConnectionError [SequelizeConnectionError]: connect ETIMEDOUT
+    at ConnectionManager.connect (/home/user/RedHare-sd-backend/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:102:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConnectionManager._connect (/home/user/RedHare-sd-backend/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:222:24)
+    at async /home/user/RedHare-sd-backend/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:174:32
+    at async ConnectionManager.getConnection (/home/user/RedHare-sd-backend/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:197:7)
+    at async /home/user/RedHare-sd-backend/node_modules/sequelize/lib/sequelize.js:305:26
+    at async MySQLQueryInterface.tableExists (/home/user/RedHare-sd-backend/node_modules/sequelize/lib/dialects/abstract/query-interface.js:102:17)
+    at async users.sync (/home/user/RedHare-sd-backend/node_modules/sequelize/lib/model.js:939:21)
+    at async Sequelize.sync (/home/user/RedHare-sd-backend/node_modules/sequelize/lib/sequelize.js:377:9) {
+  parent: Error: connect ETIMEDOUT
+      at Connection._handleTimeoutError (/home/user/RedHare-sd-backend/node_modules/mysql2/lib/connection.js:205:17)
+      at listOnTimeout (node:internal/timers:573:17)
+      at process.processTimers (node:internal/timers:514:7) {
+    errorno: 'ETIMEDOUT',
+    code: 'ETIMEDOUT',
+    syscall: 'connect',
+    fatal: true
+  },
+  original: Error: connect ETIMEDOUT
+      at Connection._handleTimeoutError (/home/user/RedHare-sd-backend/node_modules/mysql2/lib/connection.js:205:17)
+      at listOnTimeout (node:internal/timers:573:17)
+      at process.processTimers (node:internal/timers:514:7) {
+    errorno: 'ETIMEDOUT',
+    code: 'ETIMEDOUT',
+    syscall: 'connect',
+    fatal: true
+  }
+}
