@@ -31,22 +31,6 @@ npm run dev               # 개발 (nodemon)
 
 Base URL: `http://{host}:3000`
 
-### 공통
-
-**인증 헤더**: 로그인에서 받은 `accessToken`을 접두사 없이 그대로 넣는다. `Bearer `를 붙이면 실패한다.
-
-```
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-**인증 실패 응답**: HTTP 상태는 `200`이므로 body의 `message`로 판단해야 한다.
-
-```json
-{ "message": "Auth token is not supplied" }
-{ "message": "Token is not valid", "err": { "name": "TokenExpiredError", "message": "jwt expired", "expiredAt": "..." } }
-```
-
-**없는 경로**: `404`, 빈 body.
 
 ### 엔드포인트 목록
 
