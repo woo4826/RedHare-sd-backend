@@ -31,9 +31,6 @@ checkToken = (req, res, next) => {
 //generate token, re-issue token by using refresh token
 
 generateToken = (user) => {
-  console.log(process.env.JWT_SECRET);
-  console.log(user._id);
-
   const token = jwt.sign(
     {
       email: user.email,

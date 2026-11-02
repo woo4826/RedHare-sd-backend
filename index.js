@@ -1,5 +1,6 @@
 const path = require("path");
 const env = require("dotenv");
+env.config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const app = express();
@@ -14,7 +15,6 @@ const User = require("./app/models/User");
 const CMProcessing = require("./app/models/CMProcessing");
 const CustomizedModel = require("./app/models/CustomizedModel");
 
-env.config();
 // configure the app to use bodyParser()
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());

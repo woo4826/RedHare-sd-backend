@@ -20,7 +20,7 @@ const User = require("../models/User");
 const uploadDirectory = "uploads/";
 const videoUploadDirectory = "videos/";
 
-const CMG_URL = "http://localhost:4000";
+const CMG_URL = process.env.CMG_URL;
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -338,10 +338,10 @@ const payload = {
 //   });
 // }
 callFunction = async (payload, num) => {
-  const url = "http://redhare.ddns.net:6786";
+  const url = process.env.SD_API_URL;
 
   const optionPayload = {
-    sd_model_checkpoint: "magic.safetensors [7c819b6d13]",
+    sd_model_checkpoint: process.env.SD_CHECKPOINT,
   };
 
   const optionResponse = await fetch(`${url}/sdapi/v1/options`, {
